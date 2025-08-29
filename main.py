@@ -1,12 +1,27 @@
+import random
 
 class Tile:
-    def __init__(self):
+    def __init__(self, tile_type):
         self.display = "[ ]"
         self.state = "undiscovered"
-        self.type = "blank"
+        self.type = tile_type
+        self.update_display()
 
     def __repr__(self):
         return self.display
+
+    def update_display(self):
+        match self.type:
+            case 0:
+                self.display = "[ ]"
+            case 1:
+                self.display = "[·]"
+            case 2:
+                self.display = "[B]"
+            case 3:
+                self.display = "[F]"
+            case 4:
+                self.display = "[N]"
 
 
 class Board:
@@ -32,7 +47,7 @@ class Board:
         for x in range(self.width):
             column = []
             for y in range(self.height):
-                column.append(Tile())
+                column.append(Tile(random.randint(0, 4))) # Add a tile to the board
             self.tiles.append(column)
 
 board = Board(10, 10)
