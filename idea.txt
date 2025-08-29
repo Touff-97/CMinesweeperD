@@ -1,0 +1,1 @@
+The idea for this project will be to make a Minesweeper in the terminal.
