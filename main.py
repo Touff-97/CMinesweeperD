@@ -3,13 +3,13 @@ import random
 class Tile:
     def __init__(self, tile_type):
         self.display = "[ ]"
-        self.state = "undiscovered"
         self.type = tile_type
+        self.discovered = True
         self.adjacent_bombs = 0
         self.update_display()
 
     def __repr__(self):
-        return self.display.format(self.adjacent_bombs)
+        return self.display.format(self.adjacent_bombs) if self.discovered else "[ ]"
 
     def update_display(self):
         match self.type:
