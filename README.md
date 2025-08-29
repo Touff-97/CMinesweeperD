@@ -17,7 +17,7 @@ The game will behave like this:
 
 - The board will be a square of x by y size:
   
-  -- A   B   C   D   E   F   G   H   I  
+  -- A - B - C - D - E - F - G - H - I  
   1 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]  
   2 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]  
   3 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]  
