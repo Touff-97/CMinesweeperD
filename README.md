@@ -16,17 +16,17 @@ The idea for this project will be to make a Minesweeper in the terminal.
 The game will behave like this:
 
 - The board will be a square of x by y size:
-
-   A  B  C  D  E  F  G  H  I  
-1 [ ][ ][ ][ ][ ][ ][ ][ ][ ]  
-2 [ ][ ][ ][ ][ ][ ][ ][ ][ ]  
-3 [ ][ ][ ][ ][ ][ ][ ][ ][ ]  
-4 [ ][ ][ ][ ][ ][ ][ ][ ][ ]  
-5 [ ][ ][ ][ ][ ][ ][ ][ ][ ]  
-6 [ ][ ][ ][ ][ ][ ][ ][ ][ ]  
-7 [ ][ ][ ][ ][ ][ ][ ][ ][ ]  
-8 [ ][ ][ ][ ][ ][ ][ ][ ][ ]  
-9 [ ][ ][ ][ ][ ][ ][ ][ ][ ]
+  
+   A   B   C   D   E   F   G   H   I  
+1 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]  
+2 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]  
+3 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]  
+4 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]  
+5 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]  
+6 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]  
+7 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]  
+8 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]  
+9 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
 
 - There will be a counter for the bombs at the top of the board, signaling the amount of bombs left to flag
 
