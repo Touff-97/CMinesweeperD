@@ -1,3 +1,16 @@
+My new game: "CMinesweeperD" is a classic terminal roguelike. Become a rogue and uncover all the traps!
+Features include:
+- Infinite procedurally generated dungeon
+- Exploration powered by wave function collapse
+- An ability system to uncover and/or flag tiles
+- Perma-death
+- No meta progression
+- Configurable dungeon size and traps number
+- Completely done in ASCII
+- Colors for legibility
+
+---
+
 The idea for this project will be to make a Minesweeper in the terminal.
 
 The game will behave like this:
