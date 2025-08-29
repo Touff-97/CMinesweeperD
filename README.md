@@ -17,22 +17,24 @@ The game will behave like this:
 
 - The board will be a square of x by y size:
 
->       A   B   C   D   E   F   G   H   I
->    1 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
->    2 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
->    3 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
->    4 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
->    5 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
->    6 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
->    7 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
->    8 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
->    9 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
+`
+       A   B   C   D   E   F   G   H   I
+    1 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
+    2 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
+    3 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
+    4 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
+    5 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
+    6 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
+    7 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
+    8 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
+    9 [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
+`
 
 - There will be a counter for the bombs at the top of the board, signaling the amount of bombs left to flag
 
 - There will be 5 states for each tile:
 
-    1. \[ ] Undiscovered: the tile is blank and can be clicked
+    1. \[ \] Undiscovered: the tile is blank and can be clicked
     2. [·] Blank: the tile is discovered but remains blank
     3. [B] Bomb: the tile is discovered and has a bomb
     4. [F] Flagged: the tile is undiscovered and is flagged as a bomb, the bomb counter is reduced by one
