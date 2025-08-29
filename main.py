@@ -5,10 +5,11 @@ class Tile:
         self.display = "[ ]"
         self.state = "undiscovered"
         self.type = tile_type
+        self.adjacent_bombs = 0
         self.update_display()
 
     def __repr__(self):
-        return self.display
+        return self.display.format(self.adjacent_bombs)
 
     def update_display(self):
         match self.type:
@@ -21,7 +22,7 @@ class Tile:
             case 3:
                 self.display = "[F]"
             case 4:
-                self.display = "[N]"
+                self.display = "[{}]"
 
 
 class Board:
