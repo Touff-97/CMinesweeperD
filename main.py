@@ -204,6 +204,15 @@ class Board:
         return not triggered_bomb
 
 
+class Room:
+    def __init__(self, position):
+        self.position = position
+        self.connections = [None] * 4  # [N, W, S, E]
+        self.board = None
+
+    def __repr__(self):
+        return "Room {}\n{}".format(self.position, self.board)
+
 class xTile:
     def __init__(self, board, column, row, is_wall = False, is_door = False, is_discovered = False, is_bomb = False, is_flagged = False):
         self.board = board
@@ -384,7 +393,7 @@ class xBoard:
         return True
 
 
-class Room:
+class xRoom:
     def __init__(self, position, is_start = False, is_end = False):
         self.position = position
         self.is_start = is_start
