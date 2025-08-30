@@ -1,4 +1,8 @@
+import curses
 import random
+
+from curses import wrapper
+
 
 class Colors:
     BLANK = "\033[38;5;15m"     # White
@@ -15,6 +19,7 @@ class Colors:
     FLAG = "\033[38;5;196m"     # Blue
     WIN = "\033[38;5;10m"       # Green
     LOSE = "\033[38;5;1m"       # Dark Red
+
 
 class Tile:
     def __init__(self, board, column, row, is_wall = False, is_door = False, is_discovered = False, is_bomb = False, is_flagged = False):
@@ -154,7 +159,6 @@ class Board:
                     tile.is_wall = True
 
                 if self.room is not None:
-                    print(x == mid_x and y == 0)
                     if (x == mid_x and y == 0 and self.room.connections[0]) or \
                        (x == 0 and y == mid_y and self.room.connections[1]) or \
                        (x == mid_x and y == total_height - 1 and self.room.connections[2]) or \
@@ -183,7 +187,6 @@ class Board:
         triggered_bomb = False
         for col in self.tiles:
             for tile in col:
-                print(tile.is_wall, ", ", tile.is_door)
                 result = tile.discover(False)
                 if not result:
                     triggered_bomb = True
@@ -196,6 +199,7 @@ class Board:
                     return False
         return True
 
+
 class Room:
     def __init__(self, position, is_start = False, is_end = False):
         self.position = position
@@ -204,13 +208,13 @@ class Room:
         self.connections = [] # [N, W, S, E]
         self.initialize_directions()
         self.board = None
-        print("New room at position {} was created".format(self.position))
 
     def initialize_directions(self):
         self.connections = [None] * 4
 
     def __repr__(self):
         return "Room {}\n{}".format(self.position, self.board)
+
 
 class Dungeon:
     def __init__(self, width, height, max_rooms):
@@ -285,67 +289,93 @@ class Dungeon:
         self.rooms[-1].is_end = True # Mark the last room as the ending
 
 
-dungeon = Dungeon(5, 5, 10)
-dungeon.generate_dungeon()
-print(dungeon)
+class Game:
+    def __init__(self):
+        wrapper(self.main)
 
-current_room = dungeon.rooms[0]
-board = current_room.board = Board(current_room,5, 5, max_bombs=5)
-board.populate_board()
-board.count_bombs()
-print("Room: {}, Bombs left: {}".format(current_room.position, board.max_bombs - board.bombs))
-print(current_room)
+    def __repr__(self):
+        pass
 
-is_playing = True
-colors = Colors()
+    def main(self, stdscr):
+        colors = Colors()
 
-while is_playing:
-    board = current_room.board
-    print("Room: {}, Bombs left: {}".format(current_room.position, board.max_bombs - board.bombs))
-    print(board)
-    print(colors.BLANK + "\nPlease select your next action:")
-    print("\n - 'DXY' to discover a tile (where XY is column and row)")
-    print("\n - 'FXY' to flag a tile (where XY is column and row)")
-    player_input = input()
-    tile_x = (ord(player_input[1:2]) - 65) + board.border
-    tile_y = (int(player_input[2:])) + board.border
-    if 0 <= tile_x < len(board.tiles[0]) and 0 <= tile_y < len(board.tiles):
-        if player_input.startswith("D"):
-            is_safe = board.tiles[tile_y][tile_x].discover()
-            print(is_safe)
-            if not is_safe:
-                board.is_revealed = True
-                board.discover_all()
-                print("Room: {}, Bombs left: {}".format(current_room.position, board.max_bombs - board.bombs))
-                print(board)
-                print(colors.LOSE + "\nBOOM!")
-                print(colors.LOSE + "\nYou triggered a bomb and died!")
-                is_playing = False
-        elif player_input.startswith("F"):
-            if not board.tiles[tile_y][tile_x].is_discovered:
-                board.tiles[tile_y][tile_x].flag()
-                board.bombs += 1 if board.tiles[tile_y][tile_x].is_flagged else -1
-        else:
-            print(colors.LOSE + "Error: Invalid Input")
+        stdscr.clear()
 
-    if board.max_bombs - board.bombs <= 0:
-        board.is_revealed = True
-        result = board.discover_all()
-        print("Room: {}, Bombs left: {}".format(current_room.position, board.max_bombs - board.bombs))
-        print(board)
-        if not result:
-            print(colors.LOSE + "\nBOOM!")
-            print(colors.LOSE + "\nYou've failed to flag every bomb and died!")
-            is_playing = False
-        print(colors.WIN + "\nYou correctly flagged every bomb and lived!")
-        print(colors.BLANK + "\nPlease select your next action:")
-        print("\n - DIR to traverse to room (where DIR is: '^', '>', 'v', '<')")
-        player_input = input()
-        directions = ['^', '>', 'v', '<']
-        if player_input in directions:
-            door_index = directions.index(player_input)
-            new_room = current_room.connections[door_index]
-            current_room = new_room
-            current_room.populate_board()
-            current_room.count_bombs()
+        dungeon = Dungeon(5, 5, 10)
+        rows = dungeon.__repr__().split('\n')
+        for row in range(len(rows)):
+            stdscr.addstr(5, 5 + row, rows[row])
 
+
+
+
+        stdscr.refresh()
+        stdscr.getch()
+
+
+game = Game()
+
+#
+#
+# dungeon = Dungeon(5, 5, 10)
+# dungeon.generate_dungeon()
+# print(dungeon)
+#
+# current_room = dungeon.rooms[0]
+# board = current_room.board = Board(current_room,5, 5, max_bombs=5)
+# board.populate_board()
+# board.count_bombs()
+#
+# is_playing = True
+# colors = Colors()
+#
+# while is_playing:
+#     board = current_room.board
+#     print(colors.BLANK + "Room: {}, Bombs left: {}".format(current_room.position, board.max_bombs - board.bombs))
+#     print(board)
+#     print(colors.BLANK + "\nPlease select your next action:")
+#     print("\n - 'DXY' to discover a tile (where XY is column and row)")
+#     print("\n - 'FXY' to flag a tile (where XY is column and row)")
+#     player_input = input()
+#     tile_x = (ord(player_input[1:2]) - 65) + board.border
+#     tile_y = (int(player_input[2:])) + board.border
+#     if 0 <= tile_x < len(board.tiles[0]) and 0 <= tile_y < len(board.tiles):
+#         if player_input.startswith("D"):
+#             is_safe = board.tiles[tile_y][tile_x].discover()
+#             print(is_safe)
+#             if not is_safe:
+#                 board.is_revealed = True
+#                 board.discover_all()
+#                 print(colors.BLANK + "Room: {}, Bombs left: {}".format(current_room.position, board.max_bombs - board.bombs))
+#                 print(board)
+#                 print(colors.LOSE + "\nBOOM!")
+#                 print(colors.LOSE + "\nYou triggered a bomb and died!")
+#                 is_playing = False
+#         elif player_input.startswith("F"):
+#             if not board.tiles[tile_y][tile_x].is_discovered:
+#                 board.tiles[tile_y][tile_x].flag()
+#                 board.bombs += 1 if board.tiles[tile_y][tile_x].is_flagged else -1
+#         else:
+#             print(colors.LOSE + "Error: Invalid Input")
+#
+#     if board.max_bombs - board.bombs <= 0:
+#         board.is_revealed = True
+#         result = board.discover_all()
+#         print(colors.BLANK + "Room: {}, Bombs left: {}".format(current_room.position, board.max_bombs - board.bombs))
+#         print(board)
+#         if not result:
+#             print(colors.LOSE + "\nBOOM!")
+#             print(colors.LOSE + "\nYou've failed to flag every bomb and died!")
+#             is_playing = False
+#         print(colors.WIN + "\nYou correctly flagged every bomb and lived!")
+#         print(colors.BLANK + "\nPlease select your next action:")
+#         print("\n - DIR to traverse to room (where DIR is: '^', '>', 'v', '<')")
+#         player_input = input()
+#         directions = ['^', '>', 'v', '<']
+#         if player_input in directions:
+#             door_index = directions.index(player_input)
+#             new_room = current_room.connections[door_index]
+#             current_room = new_room
+#             board = current_room.board = Board(current_room, 5, 5, max_bombs=5)
+#             board.populate_board()
+#             board.count_bombs()
