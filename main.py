@@ -30,7 +30,7 @@ class Tile:
         return "[{}]".format(self.tile_type)
 
 class SafeTile(Tile):
-    def __init__(self, position, is_discovered, is_flagged, tile_type):
+    def __init__(self, position, is_discovered = False, is_flagged = False, tile_type = " "):
         super().__init__(self, position, tile_type)
         self.is_discovered = is_discovered
         self.is_flagged = is_flagged
@@ -51,7 +51,7 @@ class SafeTile(Tile):
 
 
 class BombTile(Tile):
-    def __init__(self, position, is_discovered, is_flagged, tile_type):
+    def __init__(self, position, is_discovered = False, is_flagged = False, tile_type = " "):
         super().__init__(self, position, tile_type)
         self.is_discovered = is_discovered
         self.is_flagged = is_flagged
@@ -71,7 +71,7 @@ class BombTile(Tile):
 
 
 class DoorTile(Tile):
-    def __init__(self, position, is_discovered, tile_type):
+    def __init__(self, position, is_discovered = False, tile_type = " "):
         super().__init__(self, position, tile_type)
         self.is_discovered = is_discovered
         self.is_locked = True
@@ -102,6 +102,106 @@ class StairTile(Tile):
     # Display it once the board is clear
     # Allow to continue to next floor when in the same room
     pass
+
+
+class Board:
+    max_bombs = 0
+
+    def __init__(self, position, size, border = 1):
+        self.position = position
+        self.size = size
+        self.border = border
+        self.tiles = []
+
+    def __repr__(self):
+        board_display = ""
+        for i in range(len(self.tiles) - (2 * self.border)):
+            board_display += "      {} ".format(chr(65 + i)) if i == 0 else " {} ".format(chr(65 + i)) # Add a letter for each column in the board
+        board_display += "\n"
+        for x in range(len(self.tiles)):
+            board_display += "{: <2s} ".format(str(x - 1)) if not x == 0 and not x == len(
+                self.tiles) - 1 else "   "  # Add a number for each row in the board
+            for y in range(len(self.tiles[x])):
+                board_display += "{}".format(self.tiles[x][y])  # Add each tile to the board
+            board_display += "\n"
+
+        return board_display
+
+    def get_playable_rect(self):
+        origin = (self.position[0] + self.border, self.position[1] + self.border)
+        end = ((self.size[0] - 1) - self.border, (self.size[1] - 1) - self.border) # Pending removal of '- 1' if it's not needed
+        return origin, end
+
+    def is_inside_playable_rect(self, pos):
+        origin, end = self.get_playable_rect()
+        return origin[0] <= pos[0] > end[0] and origin[1] <= pos[1] > end[1]
+
+    def populate(self):
+        origin, end = self.get_playable_rect()
+        playable_positions = [
+            (x, y)
+            for x in range(origin[0], end[0])
+            for y in range(origin[1], end[1])
+        ]
+        bomb_positions = random.sample(playable_positions, self.max_bombs)
+
+        for x in range(self.size[0]):
+            column = []
+            for y in range(self.size[1]):
+                if self.is_inside_playable_rect((x, y)):
+                    if (x, y) in bomb_positions:
+                        column.append(BombTile((x, y), tile_type="B"))
+                    else:
+                        column.append(SafeTile((x, y), tile_type="·"))
+                else:
+                    mid_x = self.size[0] // 2
+                    mid_y = self.size[1] // 2
+
+                    if (x == mid_x and y == 0) or \
+                       (x == 0 and y == mid_y) or \
+                       (x == mid_x and y == self.size[1] - 1) or \
+                       (x == self.size[0] - 1 and y == mid_y):
+                        column.append(DoorTile((x, y), tile_type="#"))
+                    else:
+                        column.append(Tile((x, y), tile_type="#"))
+            self.tiles.append(column)
+
+    def get_bombs(self):
+        bombs = []
+        for tile in self.tiles:
+            if isinstance(tile, BombTile):
+                bombs.append(tile)
+        return bombs
+
+    def get_remaining_bombs(self):
+        remaining = 0
+        for tile in self.tiles:
+            if isinstance(tile, BombTile) and not tile.is_flagged:
+                remaining += 1
+        return remaining
+
+    def propagate_discover(self, position):
+        neighbouring_tiles = [t for t in self.tiles if abs(t.position[0] - position[0]) <= 1 and abs(t.position[1] - position[1]) <= 0 or abs(t.position[0] - position[0]) <= 0 and abs(t.position[1] - position[1]) <= 1]
+        for n_tile in neighbouring_tiles:
+            if self.is_inside_playable_rect(n_tile.position):
+                if not n_tile.is_discovered and not isinstance(n_tile, BombTile):
+                    result = n_tile.discover()
+                    if not result:
+                        return False
+                    prop_result = self.propagate_discover(n_tile.position)
+                    if not prop_result:
+                        return False
+        return True
+
+    def reveal(self):
+        triggered_bomb = False
+        for col in self.tiles:
+            for tile in col:
+                if hasattr(tile, "discover"):
+                    result = tile.discover()
+                    if not result:
+                        triggered_bomb = True
+        return not triggered_bomb
 
 
 class xTile:
@@ -191,7 +291,7 @@ class xTile:
         self.display = self.update_state()
 
 
-class Board:
+class xBoard:
     def __init__(self, room, width, height, border = 1, max_bombs = 10):
         self.room = room
         self.width = width
