@@ -22,6 +22,89 @@ class Colors:
 
 
 class Tile:
+    def __init__(self, position, tile_type = " "):
+        self.tile_type = tile_type
+        self.position = position
+
+    def __repr__(self):
+        return "[{}]".format(self.tile_type)
+
+class SafeTile(Tile):
+    def __init__(self, position, is_discovered, is_flagged, tile_type):
+        super().__init__(self, position, tile_type)
+        self.is_discovered = is_discovered
+        self.is_flagged = is_flagged
+        self.adjacent_bombs = 0
+
+    def __repr__(self):
+        return super.__repr__(self) if self.is_discovered else "[ ]"
+
+    def discover(self):
+        if self.is_flagged:
+            return True
+
+        self.is_discovered = True
+        return True
+
+    def flag(self):
+        self.is_flagged = not self.is_flagged
+
+
+class BombTile(Tile):
+    def __init__(self, position, is_discovered, is_flagged, tile_type):
+        super().__init__(self, position, tile_type)
+        self.is_discovered = is_discovered
+        self.is_flagged = is_flagged
+
+    def __repr__(self):
+        return super.__repr__(self) if self.is_discovered else "[ ]"
+
+    def discover(self):
+        if self.is_flagged:
+            return True
+
+        self.is_discovered = True
+        return False
+
+    def flag(self):
+        self.is_flagged = not self.is_flagged
+
+
+class DoorTile(Tile):
+    def __init__(self, position, is_discovered, tile_type):
+        super().__init__(self, position, tile_type)
+        self.is_discovered = is_discovered
+        self.is_locked = True
+
+    def discover(self):
+        if self.is_locked:
+            return True
+
+        self.is_discovered = True
+        return True
+
+    def get_door_direction(self):
+        if self.position[1] == 0:
+            return "^"
+        elif self.position[1] < self.position[0]:
+            return ">"
+        elif self.position[1] > self.position[0]:
+            return "v"
+        elif self.position[0] == 0:
+            return "<"
+
+        return "D"
+
+
+class StairTile(Tile):
+    # TODO:
+    # Add stair tile to the last room of the dungeon
+    # Display it once the board is clear
+    # Allow to continue to next floor when in the same room
+    pass
+
+
+class xTile:
     def __init__(self, board, column, row, is_wall = False, is_door = False, is_discovered = False, is_bomb = False, is_flagged = False):
         self.board = board
         self.column = column
@@ -36,6 +119,7 @@ class Tile:
 
     def __repr__(self):
         return self.display.format(self.adjacent_bombs)
+
 
     def check_door_direction(self):
         mid_x = len(self.board.tiles[0]) // 2
