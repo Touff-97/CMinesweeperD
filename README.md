@@ -45,3 +45,15 @@ The game will behave like this:
 - When a tile is discovered and is a bomb, it'll forcefully explode every other bomb and the game will be over
 
 - When every bomb is flagged, the player wins
+
+---
+
+### Update plan:
+
+- Add a dungeon class that will generate a floor plan. Each room is a minesweeper board
+
+- Boards now have a border of walls where doors are placed
+
+- Once you clear a room, all available doors will open and you'll be able to advance to any other room
+
+- Possibly add enemies and combat later
