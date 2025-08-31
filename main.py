@@ -331,6 +331,11 @@ class Game:
 
         return dungeon, first_room
 
+    def get_camera_offset(self, player_pos, viewport_size):
+        offset_x = player_pos[0] - viewport_size[0] // 2
+        offset_y = player_pos[1] - viewport_size[1] // 2
+        return offset_x, offset_y
+
     def main(self, stdscr):
         curses.curs_set(0)
         stdscr.clear()
@@ -338,16 +343,12 @@ class Game:
         height, width = stdscr.getmaxyx()
         print(f"x:{width}, y:{height}")
 
-        # status_bar = curses.newwin(1, width, 0, 0)
-        # play_area = curses.newwin(10, 20, 1, 0)
-        # dungeon_map = curses.newwin(10, 20, 1, 25)
-        # action_menu = curses.newwin(3, width, 11, 0)
-
         status_bar = curses.newwin(int(height * 0.05), width, 0, 0)
         play_area = curses.newwin(int(height * 0.6), int(width * 0.6), int(height * 0.1), 0)
         dungeon_map = curses.newwin(int(height * 0.35), int(width * 0.35), int(height * 0.1), int(width * 0.65))
         action_menu = curses.newwin(int(height * 0.25), width, int(height * 0.65), 0)
 
+        player = Character((0, 0))
         dungeon, current_room = self.init_dungeon()
 
         while self.is_playing:
@@ -356,18 +357,41 @@ class Game:
             status_bar.refresh()
 
             play_area.clear()
-            for i in range(len(current_room.board.tiles)):
-                play_area.addstr(0, 5 + (i * 3), "{}".format(chr(65 + i)))
-                play_area.addstr(1 + i, 0, "  {}".format(i))
-            for i in range(len(current_room.board.tiles)):
-                for j in range(len(current_room.board.tiles[0])):
-                    play_area.addstr(1 + i, 4 + (j * 3), "{}".format(current_room.board.tiles[i][j]))
+            for room in dungeon.rooms:
+                # This is to account for room's sizes and a border around them
+                global_x = room.position[0] * room.size[0] + 2 # 0 = 2, 1 = 12, 2 = 24, 3 = 36...
+                global_y = room.position[1] * room.size[1] + 2 # 0 = 2, 1 = 12, 2 = 24, 3 = 36...
+
+                # TODO: Check if the tile is inside the play area and if it is, render it.
+                for i in range(len(room.board.tiles)):
+                    play_area.addstr(global_y, global_x + 5 + (i * 3), "{}".format(chr(65 + i)))
+                    play_area.addstr(global_y + 1 + i, global_x, "  {}".format(i))
+                for i in range(len(room.board.tiles)):
+                    for j in range(len(room.board.tiles[0])):
+                        play_area.addstr(global_y + 1 + i, global_x + 4 + (j * 3), "{}".format(room.board.tiles[i][j]))
+
+            height, width = play_area.getmaxyx()
+            play_area.addstr(height // 2, width // 2, "{}".format(player.char_type)) # Render player in the center of the play area
             play_area.refresh()
 
             dungeon_map.clear()
-            dungeon_map.addstr(0, 0, "X X O X X")
-            dungeon_map.addstr(1, 0, "X X O O S")
-            dungeon_map.addstr(2, 0, "X E O O X")
+            for i in range(dungeon.size[0]):
+                dungeon_map.addstr(0, 5 + (i * 3), "{}".format(chr(65 + i)))
+                dungeon_map.addstr(1 + i, 0, "  {}".format(i))
+
+            for i in range(dungeon.size[0]):
+                for j in range(dungeon.size[1]):
+                    position = (i, j)
+                    if dungeon.room_exists_at(position):
+                        if dungeon.get_room_at(position) == dungeon.rooms[0]:
+                            dungeon_map.addstr(1 + i, 5 + (j * 3), "S")
+                        elif dungeon.is_last_room(dungeon.get_room_at(position)):
+                            dungeon_map.addstr(1 + i, 5 + (j * 3), "E")
+                        else:
+                            dungeon_map.addstr(1 + i, 5 + (j * 3), "O")
+                    else:
+                        dungeon_map.addstr(1 + i, 5 + (j * 3), "·")
+
             dungeon_map.refresh()
 
             action_menu.clear()
