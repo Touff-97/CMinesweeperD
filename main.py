@@ -23,15 +23,15 @@ class Colors:
 
 class Tile:
     def __init__(self, position, tile_type = " "):
-        self.tile_type = tile_type
         self.position = position
+        self.tile_type = tile_type
 
     def __repr__(self):
         return "[{}]".format(self.tile_type)
 
 class SafeTile(Tile):
-    def __init__(self, position, is_discovered = False, is_flagged = False, tile_type = " "):
-        super().__init__(self, position, tile_type)
+    def __init__(self, position, tile_type = " ", is_discovered = False, is_flagged = False):
+        super().__init__(position, tile_type)
         self.is_discovered = is_discovered
         self.is_flagged = is_flagged
         self.adjacent_bombs = 0
@@ -51,8 +51,8 @@ class SafeTile(Tile):
 
 
 class BombTile(Tile):
-    def __init__(self, position, is_discovered = False, is_flagged = False, tile_type = " "):
-        super().__init__(self, position, tile_type)
+    def __init__(self, position, tile_type = " ", is_discovered = False, is_flagged = False):
+        super().__init__(position, tile_type)
         self.is_discovered = is_discovered
         self.is_flagged = is_flagged
 
@@ -71,8 +71,8 @@ class BombTile(Tile):
 
 
 class DoorTile(Tile):
-    def __init__(self, position, is_discovered = False, tile_type = " "):
-        super().__init__(self, position, tile_type)
+    def __init__(self, position, tile_type = " ", is_discovered = False):
+        super().__init__(position, tile_type)
         self.is_discovered = is_discovered
         self.is_locked = True
 
@@ -165,6 +165,20 @@ class Board:
                     else:
                         column.append(Tile((x, y), tile_type="#"))
             self.tiles.append(column)
+
+    def quantify_bombs(self):
+        for col in self.tiles:
+            for tile in col:
+                neighbouring_tiles = [
+                    self.tiles[x][y]
+                    for x in range(max(0, tile.position[0] - 1), min(len(self.tiles), tile.position[0] + 2))
+                    for y in range(max(0, tile.position[1] - 1), min(len(self.tiles[0]), tile.position[1] + 2))
+                    if (x, y) != self.tiles[x][y].position
+                ]
+                for n_tile in neighbouring_tiles:
+                    if isinstance(n_tile, BombTile) and self.is_inside_playable_rect(n_tile.position):
+                        tile.adjacent_bombs += 1
+                        tile.tile_type = tile.adjacent_bombs
 
     def get_bombs(self):
         bombs = []
@@ -290,293 +304,79 @@ class Dungeon:
                     break
 
 
-
-
-class xTile:
-    def __init__(self, board, column, row, is_wall = False, is_door = False, is_discovered = False, is_bomb = False, is_flagged = False):
-        self.board = board
-        self.column = column
-        self.row = row
-        self.is_wall = is_wall
-        self.is_door = is_door
-        self.is_discovered = is_discovered
-        self.is_bomb = is_bomb
-        self.is_flagged = is_flagged
-        self.adjacent_bombs = 0
-        self.display = self.update_state()
-
-    def __repr__(self):
-        return self.display.format(self.adjacent_bombs)
-
-
-    def check_door_direction(self):
-        mid_x = len(self.board.tiles[0]) // 2
-        mid_y = len(self.board.tiles) // 2
-
-        if self.row == 0 and self.column == mid_x:
-            return 0  # North
-        elif self.column == len(self.board.tiles[0]) - 1 and self.row == mid_y:
-            return 1  # East
-        elif self.row == len(self.board.tiles) - 1 and self.column == mid_x:
-            return 2  # South
-        elif self.column == 0 and self.row == mid_y:
-            return 3  # West
-
-        return -1
-
-    def update_state(self):
-        colors = Colors()
-        if self.is_door:
-            if not self.board.is_revealed:
-                return colors.BLANK + "[#]"
-            else:
-                directions = ['[<]', '[v]' ,'[>]', '[^]']
-                direction_index = self.check_door_direction()
-                if direction_index == -1:
-                    return colors.SEVEN + "[D]"  # fallback
-                return colors.SEVEN + directions[direction_index]
-        if self.is_wall:
-            return colors.BLANK + "[#]"
-        if self.is_flagged:
-            return colors.BOMB + "[F]" if self.board.is_revealed and self.is_bomb else colors.FLAG + "[F]"
-        if not self.is_discovered:
-            return colors.BLANK + "[ ]"
-        if self.is_bomb:
-            return colors.BOMB + "[B]"
-        if self.adjacent_bombs <= 0:
-            return colors.ZERO + "[·]"
-        number_color = colors.ONE if self.adjacent_bombs == 1 else colors.TWO if self.adjacent_bombs == 2 else colors.THREE if self.adjacent_bombs == 3 else colors.FOUR if self.adjacent_bombs == 4 else colors.FIVE if self.adjacent_bombs == 5 else colors.SIX if self.adjacent_bombs == 6 else colors.SEVEN if self.adjacent_bombs == 7 else colors.EIGHT
-        return number_color + "[{}]"
-
-    def discover(self, is_recursive=True):
-        self.display = self.update_state()
-
-        if self.is_flagged:
-            return True
-
-        self.is_discovered = True
-        self.display = self.update_state()
-
-        if self.is_bomb:
-            return False
-
-        if is_recursive and self.adjacent_bombs == 0:
-            adjacency = [(1, 0), (0, 1), (-1, 0), (0, -1)]
-            for dx, dy in adjacency:
-                adj_x = self.column + dx
-                adj_y = self.row + dy
-                if 0 <= adj_x < len(self.board.tiles[0]) and 0 <= adj_y < len(self.board.tiles):
-                    adj_tile = self.board.tiles[adj_y][adj_x]
-                    if not adj_tile.is_discovered and not adj_tile.is_bomb:
-                        result = adj_tile.discover()
-                        if not result:
-                            return False
-
-        return True
-
-    def flag(self):
-        self.is_flagged = not self.is_flagged
-        self.display = self.update_state()
-
-
-class xBoard:
-    def __init__(self, room, width, height, border = 1, max_bombs = 10):
-        self.room = room
-        self.width = width
-        self.height = height
-        self.border = border
-        self.max_bombs = max_bombs
-        self.bombs = 0
-        self.tiles = []
-
-        self.is_revealed = False
-
-    def __repr__(self):
-        colors = Colors()
-        board_display = "      "
-        for i in range(len(self.tiles) - (2 * self.border)):
-            board_display += colors.BLANK + " {} ".format(chr(65 + i)) # Add a letter for each column in the board
-        board_display += "\n"
-        for x in range(len(self.tiles)):
-            board_display += colors.BLANK + "{: <2s} ".format(str(x - 1)) if not x == 0 and not x == len(self.tiles) - 1 else colors.BLANK + "   "# Add a number for each row in the board
-            for y in range(len(self.tiles[x])):
-                board_display += "{}".format(self.tiles[x][y]) # Add each tile to the board
-            board_display += "\n"
-
-        return board_display
-
-    def populate_board(self):
-        total_width = self.width + (2 * self.border)
-        total_height = self.height + (2 * self.border)
-        mid_x = total_width // 2
-        mid_y = total_height // 2
-
-        playable_positions = [
-            (x, y)
-            for x in range(self.border, total_width - self.border)
-            for y in range(self.border, total_height - self.border)
-        ]
-
-        bomb_positions = random.sample(playable_positions, self.max_bombs)
-
-        for x in range(total_width):
-            column = []
-            for y in range(total_height):
-                is_bomb = (x, y) in bomb_positions
-                tile = Tile(self, x, y, is_bomb=is_bomb)
-
-                if self.border <= x < total_width - self.border and self.border <= y < total_height - self.border:
-                    tile.is_wall = False
-                else:
-                    tile.is_wall = True
-
-                if self.room is not None:
-                    if (x == mid_x and y == 0 and self.room.connections[0]) or \
-                       (x == 0 and y == mid_y and self.room.connections[1]) or \
-                       (x == mid_x and y == total_height - 1 and self.room.connections[2]) or \
-                       (x == total_width - 1 and y == mid_y and self.room.connections[3]):
-                        tile.is_door = True
-                        tile.is_wall = False
-
-                column.append(tile)
-            self.tiles.append(column)
-
-    def count_bombs(self):
-        for col in self.tiles:
-            for tile in col:
-                bombs = 0
-                adjacency = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
-                for dx, dy in adjacency:
-                    adj_x = tile.column + dx
-                    adj_y = tile.row + dy
-                    if 0 + self.border <= adj_x < len(self.tiles[0]) - self.border and 0 + self.border <= adj_y < len(self.tiles) - self.border:
-                        if self.tiles[adj_x][adj_y].is_bomb:
-                            bombs += 1
-                tile.adjacent_bombs = bombs
-                tile.display = tile.update_state()
-
-    def discover_all(self):
-        triggered_bomb = False
-        for col in self.tiles:
-            for tile in col:
-                result = tile.discover(False)
-                if not result:
-                    triggered_bomb = True
-        return not triggered_bomb
-
-    def is_cleared(self):
-        for col in self.tiles:
-            for tile in col:
-                if tile.is_bomb and not tile.is_discovered:
-                    return False
-        return True
-
-
-class xRoom:
-    def __init__(self, position, is_start = False, is_end = False):
+class Character:
+    def __init__(self, position, char_type = "@"):
         self.position = position
-        self.is_start = is_start
-        self.is_end = is_end
-        self.connections = [] # [N, W, S, E]
-        self.initialize_directions()
-        self.board = None
-
-    def initialize_directions(self):
-        self.connections = [None] * 4
-
-    def __repr__(self):
-        return "Room {}\n{}".format(self.position, self.board)
-
-
-class xDungeon:
-    def __init__(self, width, height, max_rooms):
-        self.level = 0
-        self.width = width
-        self.height = height
-        self.max_rooms = max_rooms
-        self.rooms = []
-
-    def __repr__(self):
-        colors = Colors()
-        dungeon_map = "  "
-        for i in range(self.width):
-            dungeon_map += colors.BLANK + "{} ".format(chr(65 + i)) # Add a letter for each column in the board
-        dungeon_map += "\n"
-        for i in range(self.width):
-            dungeon_map += colors.BLANK + "{} ".format(i)  # Add a number for each row in the board
-            for j in range(self.height):
-                if self.room_exists_at((j, i)):
-                    dungeon_map += ""
-                    room = self.get_room_at((j, i))
-                    if room.is_start:
-                        dungeon_map += colors.ONE + "S "
-                    elif room.is_end:
-                        dungeon_map += colors.THREE + "E "
-                    else:
-                        dungeon_map += colors.SEVEN + "O "
-                else:
-                    dungeon_map += colors.ZERO + "X "
-            dungeon_map += "\n"
-        return dungeon_map
-
-    def room_exists_at(self, position):
-        return any(room.position == position for room in self.rooms)
-
-    def get_room_at(self, position):
-        for room in self.rooms:
-            if room.position == position:
-                return room
-        return None
-
-    def generate_dungeon(self):
-        print("Generating dungeon layout...")
-        starting_position = (random.randint(0, self.width - 1), random.randint(0, self.height - 1))
-        starting_room = Room(starting_position, is_start=True)
-        self.rooms.append(starting_room)
-
-        while len(self.rooms) < self.max_rooms:
-            random_room = random.choice(self.rooms)
-            adjacency = [(0, -1), (-1, 0), (0, 1), (1, 0)] # N, W, S, E
-
-            while adjacency:
-                random_adj = random.choice(adjacency)
-
-                adjacency_index = adjacency.index(random_adj)
-                reverse_index = (adjacency_index + 2) % 4
-
-                adjacency.pop(adjacency_index)
-
-                adj_x = random_room.position[0] + random_adj[0]
-                adj_y = random_room.position[1] + random_adj[1]
-                new_position = (adj_x, adj_y)
-
-                if (0 <= adj_x < self.width and 0 <= adj_y < self.height and random_room.connections[adjacency_index] is None and
-                        not self.room_exists_at(new_position)):
-                    new_room = Room(new_position)
-                    new_room.connections[reverse_index] = random_room
-                    random_room.connections[adjacency_index] = new_room
-                    self.rooms.append(new_room)
-                    break
-
-        self.rooms[-1].is_end = True # Mark the last room as the ending
+        self.char_type = char_type
 
 
 class Game:
     def __init__(self):
+        self.is_playing = True
         wrapper(self.main)
 
     def __repr__(self):
         pass
 
+    def init_dungeon(self):
+        dungeon = Dungeon((5, 5))
+        dungeon.max_rooms = 10
+        dungeon.generate_floor()
+
+        first_room = dungeon.rooms[0]
+        board = first_room.board = Board(first_room.position, (10, 10))
+        board.max_bombs = 5
+        board.populate()
+        board.quantify_bombs()
+
+        return dungeon, first_room
+
     def main(self, stdscr):
         curses.curs_set(0)
         stdscr.clear()
 
-        dungeon = Dungeon((5, 5))
-        dungeon.max_rooms = 10
+        height, width = stdscr.getmaxyx()
+        print(f"x:{width}, y:{height}")
 
-        stdscr.refresh()
-        stdscr.getch()
+        # status_bar = curses.newwin(1, width, 0, 0)
+        # play_area = curses.newwin(10, 20, 1, 0)
+        # dungeon_map = curses.newwin(10, 20, 1, 25)
+        # action_menu = curses.newwin(3, width, 11, 0)
+
+        status_bar = curses.newwin(int(height * 0.05), width, 0, 0)
+        play_area = curses.newwin(int(height * 0.6), int(width * 0.6), int(height * 0.1), 0)
+        dungeon_map = curses.newwin(int(height * 0.35), int(width * 0.35), int(height * 0.1), int(width * 0.65))
+        action_menu = curses.newwin(int(height * 0.25), width, int(height * 0.65), 0)
+
+        dungeon, current_room = self.init_dungeon()
+
+        while self.is_playing:
+            status_bar.clear()
+            status_bar.addstr(0, 0, "Room: {}, Bombs: {}".format(current_room.position, current_room.board.get_remaining_bombs()))
+            status_bar.refresh()
+
+            play_area.clear()
+            for i in range(5):
+                play_area.addstr(i, 0, "[ ][ ][ ][ ][ ]")
+            play_area.refresh()
+
+            dungeon_map.clear()
+            dungeon_map.addstr(0, 0, "X X O X X")
+            dungeon_map.addstr(1, 0, "X X O O S")
+            dungeon_map.addstr(2, 0, "X E O O X")
+            dungeon_map.refresh()
+
+            action_menu.clear()
+            action_menu.addstr(0, 0, "a. Discover tile")
+            action_menu.addstr(1, 0, "b. Flag tile")
+            action_menu.addstr(2, 0, "c. Go to room")
+            action_menu.refresh()
+
+            stdscr.refresh()
+
+            key = stdscr.getch()
+            if key == ord('q'):
+                break
 
 
 game = Game()
