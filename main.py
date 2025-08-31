@@ -336,6 +336,9 @@ class Game:
         offset_y = player_pos[1] - viewport_size[1] // 2
         return offset_x, offset_y
 
+    def is_inside_viewport(self, x, y, viewport_width, viewport_height):
+        return 0 <= x < viewport_width and 0 <= y < viewport_height
+
     def main(self, stdscr):
         curses.curs_set(0)
         stdscr.clear()
@@ -357,21 +360,43 @@ class Game:
             status_bar.refresh()
 
             play_area.clear()
+            pa_height, pa_width = play_area.getmaxyx()
+            player.position = (pa_width // 2, pa_height // 2)
             for room in dungeon.rooms:
+                board = room.board = Board(room.position, (10, 10))
+                board.max_bombs = 5
+                board.populate()
+                board.quantify_bombs()
+
                 # This is to account for room's sizes and a border around them
-                global_x = room.position[0] * room.size[0] + 2 # 0 = 2, 1 = 12, 2 = 24, 3 = 36...
-                global_y = room.position[1] * room.size[1] + 2 # 0 = 2, 1 = 12, 2 = 24, 3 = 36...
+                global_x = room.position[0] * board.size[0] * 2 # 0 = 2, 1 = 12, 2 = 24, 3 = 36...
+                global_y = room.position[1] * board.size[1] * 2 # 0 = 2, 1 = 12, 2 = 24, 3 = 36...
+
+                camera_offset_x, camera_offset_y = self.get_camera_offset(player.position, (pa_width, pa_height))
+
+                global_x -= camera_offset_x
+                global_y -= camera_offset_y
 
                 # TODO: Check if the tile is inside the play area and if it is, render it.
                 for i in range(len(room.board.tiles)):
-                    play_area.addstr(global_y, global_x + 5 + (i * 3), "{}".format(chr(65 + i)))
-                    play_area.addstr(global_y + 1 + i, global_x, "  {}".format(i))
+                    col_screen_y = global_y
+                    col_screen_x = global_x + 5 + (i * 3)
+                    if self.is_inside_viewport(col_screen_x, col_screen_y, pa_width, pa_height):
+                        play_area.addstr(col_screen_y, col_screen_x, "{}".format(chr(65 + i))) # Column helper indicator (A B C D E...)
+
+                    row_screen_y = global_y + 1 + i
+                    row_screen_x = global_x
+                    if self.is_inside_viewport(row_screen_x, row_screen_y, pa_width, pa_height):
+                        play_area.addstr(row_screen_y, row_screen_x, "  {}".format(i)) # Row helper indicator (0 1 2 3 4...)
+
                 for i in range(len(room.board.tiles)):
                     for j in range(len(room.board.tiles[0])):
-                        play_area.addstr(global_y + 1 + i, global_x + 4 + (j * 3), "{}".format(room.board.tiles[i][j]))
+                        screen_y = global_y + 1 + i
+                        screen_x = global_x + 4 + (j * 3)
+                        if self.is_inside_viewport(screen_x, screen_y, pa_width, pa_height):
+                            play_area.addstr(screen_y, screen_x, "{}".format(room.board.tiles[i][j]))
 
-            height, width = play_area.getmaxyx()
-            play_area.addstr(height // 2, width // 2, "{}".format(player.char_type)) # Render player in the center of the play area
+            play_area.addstr(pa_height // 2, pa_width // 2, "{}".format(player.char_type)) # Render player in the center of the play area
             play_area.refresh()
 
             dungeon_map.clear()
