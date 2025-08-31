@@ -352,12 +352,16 @@ class Game:
 
         while self.is_playing:
             status_bar.clear()
-            status_bar.addstr(0, 0, "Room: {}, Bombs: {}".format(current_room.position, current_room.board.get_remaining_bombs()))
+            status_bar.addstr(1, 1, "Room: {}, Bombs: {}".format(current_room.position, current_room.board.get_remaining_bombs()))
             status_bar.refresh()
 
             play_area.clear()
-            for i in range(5):
-                play_area.addstr(i, 0, "[ ][ ][ ][ ][ ]")
+            for i in range(len(current_room.board.tiles)):
+                play_area.addstr(0, 5 + (i * 3), "{}".format(chr(65 + i)))
+                play_area.addstr(1 + i, 0, "  {}".format(i))
+            for i in range(len(current_room.board.tiles)):
+                for j in range(len(current_room.board.tiles[0])):
+                    play_area.addstr(1 + i, 4 + (j * 3), "{}".format(current_room.board.tiles[i][j]))
             play_area.refresh()
 
             dungeon_map.clear()
