@@ -134,7 +134,7 @@ class Board:
 
     def is_inside_playable_rect(self, pos):
         origin, end = self.get_playable_rect()
-        return origin[0] <= pos[0] > end[0] and origin[1] <= pos[1] > end[1]
+        return origin[0] <= pos[0] <= end[0] and origin[1] <= pos[1] <= end[1]
 
     def populate(self):
         origin, end = self.get_playable_rect()
@@ -168,20 +168,23 @@ class Board:
 
     def get_bombs(self):
         bombs = []
-        for tile in self.tiles:
-            if isinstance(tile, BombTile):
-                bombs.append(tile)
+        for col in self.tiles:
+            for tile in col:
+                if isinstance(tile, BombTile):
+                    bombs.append(tile)
         return bombs
 
     def get_remaining_bombs(self):
         remaining = 0
-        for tile in self.tiles:
-            if isinstance(tile, BombTile) and not tile.is_flagged:
-                remaining += 1
+        for col in self.tiles:
+            for tile in col:
+                if isinstance(tile, BombTile) and not tile.is_flagged:
+                    remaining += 1
         return remaining
 
     def propagate_discover(self, position):
-        neighbouring_tiles = [t for t in self.tiles if abs(t.position[0] - position[0]) <= 1 and abs(t.position[1] - position[1]) <= 0 or abs(t.position[0] - position[0]) <= 0 and abs(t.position[1] - position[1]) <= 1]
+        neighbouring_tiles = [self.tiles[x][y] for x in range(len(self.tiles)) for y in range(len(self.tiles[0])) if abs(x - position[0]) <= 1 and abs(y - position[1]) <= 0 or abs(x - position[0]) <= 0 and abs(y - position[1]) <= 1]
+
         for n_tile in neighbouring_tiles:
             if self.is_inside_playable_rect(n_tile.position):
                 if not n_tile.is_discovered and not isinstance(n_tile, BombTile):
@@ -212,6 +215,82 @@ class Room:
 
     def __repr__(self):
         return "Room {}\n{}".format(self.position, self.board)
+
+
+class Dungeon:
+    max_rooms = 0
+
+    def __init__(self, size):
+        self.size = size
+        self.rooms = []
+
+    def __repr__(self):
+        dungeon_map = "  "
+        for i in range(self.size[0]):
+            dungeon_map += "{} ".format(chr(65 + i)) # Add a letter for each column in the board
+        dungeon_map += "\n"
+        for i in range(self.size[0]):
+            dungeon_map += "{} ".format(i)  # Add a number for each row in the board
+            for j in range(self.size[1]):
+                if self.room_exists_at((j, i)):
+                    dungeon_map += ""
+                    room = self.get_room_at((j, i))
+                    if room.is_start:
+                        dungeon_map += "S "
+                    elif room.is_end:
+                        dungeon_map += "E "
+                    else:
+                        dungeon_map += "O "
+                else:
+                    dungeon_map += "X "
+            dungeon_map += "\n"
+        return dungeon_map
+
+    def room_exists_at(self, position):
+        return any(room.position == position for room in self.rooms)
+
+    def get_room_at(self, position):
+        for room in self.rooms:
+            if room.position == position:
+                return room
+        return None
+
+    def is_last_room(self, room):
+        return self.rooms[-1] == room
+
+    def generate_floor(self):
+        print("Generating dungeon floor layout...")
+        starting_position = (random.randint(0, self.size[0] - 1), random.randint(0, self.size[1] - 1))
+        starting_room = Room(starting_position)
+        self.rooms.append(starting_room)
+
+        while len(self.rooms) < self.max_rooms:
+            random_room = random.choice(self.rooms)
+            adjacency = [(0, -1), (-1, 0), (0, 1), (1, 0)]  # N, W, S, E
+
+            while adjacency:
+                random_adj = random.choice(adjacency)
+
+                adjacency_index = adjacency.index(random_adj)
+                reverse_index = (adjacency_index + 2) % 4
+
+                adjacency.pop(adjacency_index)
+
+                adj_x = random_room.position[0] + random_adj[0]
+                adj_y = random_room.position[1] + random_adj[1]
+                new_position = (adj_x, adj_y)
+
+                if (0 <= adj_x < self.size[0] and 0 <= adj_y < self.size[1] and random_room.connections[
+                    adjacency_index] is None and
+                        not self.room_exists_at(new_position)):
+                    new_room = Room(new_position)
+                    new_room.connections[reverse_index] = random_room
+                    random_room.connections[adjacency_index] = new_room
+                    self.rooms.append(new_room)
+                    break
+
+
+
 
 class xTile:
     def __init__(self, board, column, row, is_wall = False, is_door = False, is_discovered = False, is_bomb = False, is_flagged = False):
@@ -409,7 +488,7 @@ class xRoom:
         return "Room {}\n{}".format(self.position, self.board)
 
 
-class Dungeon:
+class xDungeon:
     def __init__(self, width, height, max_rooms):
         self.level = 0
         self.width = width
@@ -490,17 +569,11 @@ class Game:
         pass
 
     def main(self, stdscr):
-        colors = Colors()
-
+        curses.curs_set(0)
         stdscr.clear()
 
-        dungeon = Dungeon(5, 5, 10)
-        rows = dungeon.__repr__().split('\n')
-        for row in range(len(rows)):
-            stdscr.addstr(5, 5 + row, rows[row])
-
-
-
+        dungeon = Dungeon((5, 5))
+        dungeon.max_rooms = 10
 
         stdscr.refresh()
         stdscr.getch()
