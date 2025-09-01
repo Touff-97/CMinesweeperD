@@ -324,12 +324,12 @@ class Game:
     
     def render(self):
         self.window[0].clear()
-        self.window[0].addstr(1, 1, "Room: {}, Bombs: {}")
+        self.window[0].addstr(1, 1, "x: {}, y: {}".format(self.player.position[0], self.player.position[1]))
         self.window[0].refresh()
 
         self.window[1].clear()
         pa_height, pa_width = self.window[1].getmaxyx()
-        self.player.position = (pa_width // 2, pa_height // 2)
+
         for room in self.dungeon.rooms:
             board = room.board = Board(room.position, (10, 10))
             board.max_bombs = 5
@@ -337,10 +337,8 @@ class Game:
             board.quantify_bombs()
 
             # This is to account for room's sizes and a border around them
-            global_x = room.position[0] * board.size[
-                0] * 4  # [X] each tile is 3 characters long plus a space between boards
-            global_y = (room.position[1] * board.size[
-                1] * 3) // 2  # each tile is 1 character tall plus a space between boards
+            global_x = room.position[0] * board.size[0] * 4  # [X] each tile is 3 characters long plus a space between boards
+            global_y = (room.position[1] * board.size[1] * 3) // 2  # each tile is 1 character tall plus a space between boards
 
             camera_offset_x, camera_offset_y = self.get_camera_offset(self.player.position, (pa_width, pa_height))
 
@@ -349,20 +347,17 @@ class Game:
 
             # TODO: Check if the tile is inside the play area and if it is, render it.
             if self.is_inside_viewport(global_x, global_y, pa_width, pa_height):
-                self.window[1].addstr(global_y, global_x + 2,
-                                      "Room: {}, Bombs: {}".format(room.position, room.board.get_remaining_bombs()))
+                self.window[1].addstr(global_y, global_x + 2, "Room: {}, Bombs: {}".format(room.position, room.board.get_remaining_bombs()))
             for i in range(len(room.board.tiles)):
                 col_screen_y = global_y + 1
                 col_screen_x = global_x + 5 + (i * 3)
                 if self.is_inside_viewport(col_screen_x, col_screen_y, pa_width, pa_height):
-                    self.window[1].addstr(col_screen_y, col_screen_x,
-                                          "{}".format(chr(65 + i)))  # Column helper indicator (A B C D E...)
+                    self.window[1].addstr(col_screen_y, col_screen_x, "{}".format(chr(65 + i)))  # Column helper indicator (A B C D E...)
 
                 row_screen_y = global_y + 2 + i
                 row_screen_x = global_x
                 if self.is_inside_viewport(row_screen_x, row_screen_y, pa_width, pa_height):
-                    self.window[1].addstr(row_screen_y, row_screen_x,
-                                          "  {}".format(i))  # Row helper indicator (0 1 2 3 4...)
+                    self.window[1].addstr(row_screen_y, row_screen_x, "  {}".format(i))  # Row helper indicator (0 1 2 3 4...)
 
             for i in range(len(room.board.tiles)):
                 for j in range(len(room.board.tiles[0])):
@@ -371,8 +366,7 @@ class Game:
                     if self.is_inside_viewport(screen_x, screen_y, pa_width, pa_height):
                         self.window[1].addstr(screen_y, screen_x, "{}".format(room.board.tiles[i][j]))
 
-        self.window[1].addstr(pa_height // 2, pa_width // 2,
-                              "{}".format(self.player.char_type))  # Render player in the center of the play area
+        self.window[1].addstr(pa_height // 2, pa_width // 2, "{}".format(self.player.char_type))  # Render player in the center of the play area
         self.window[1].refresh()
 
         self.window[2].clear()
@@ -396,13 +390,25 @@ class Game:
         self.window[2].refresh()
 
         self.window[3].clear()
-        self.window[3].addstr(0, 0, "a. Discover tile")
-        self.window[3].addstr(1, 0, "b. Flag tile")
-        self.window[3].addstr(2, 0, "c. Go to room")
+        self.window[3].addstr(0, 0, "1. Discover tile")
+        self.window[3].addstr(1, 0, "2. Flag tile")
+        self.window[3].addstr(2, 0, "3. Go to room")
         self.window[3].refresh()
-    
+
     def handle_input(self, event):
-        pass
+        if event == ord('a'):
+            self.player.position = (self.player.position[0] - 3, self.player.position[1])
+            print("move_left")
+        elif event == ord('d'):
+            self.player.position = (self.player.position[0] + 3, self.player.position[1])
+            print("move_right")
+
+        if event == ord('w'):
+            self.player.position = (self.player.position[0], self.player.position[1] - 1)
+            print("move_up")
+        elif event == ord('s'):
+            self.player.position = (self.player.position[0], self.player.position[1] + 1)
+            print("move_down")
     
     def loop(self, delta):
         pass
@@ -453,6 +459,9 @@ class Game:
         play_area = curses.newwin(int(height * 0.6), int(width * 0.6), int(height * 0.1), 0)
         dungeon_map = curses.newwin(int(height * 0.35), int(width * 0.35), int(height * 0.1), int(width * 0.65))
         action_menu = curses.newwin(int(height * 0.25), width, int(height * 0.65), 0)
+
+        pa_height, pa_width = play_area.getmaxyx()
+        self.player.position = (pa_width // 2, pa_height // 2)
 
         return status_bar, play_area, dungeon_map, action_menu
 
