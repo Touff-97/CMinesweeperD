@@ -1,5 +1,6 @@
 import curses
 import random
+import time
 
 from curses import wrapper
 
@@ -313,10 +314,126 @@ class Character:
 class Game:
     def __init__(self):
         self.is_playing = True
+        self.dungeon = None
+        self.player = Character((0, 0))
+        self.window = None
         wrapper(self.main)
 
     def __repr__(self):
         pass
+    
+    def render(self):
+        self.window[0].clear()
+        self.window[0].addstr(1, 1, "Room: {}, Bombs: {}")
+        self.window[0].refresh()
+
+        self.window[1].clear()
+        pa_height, pa_width = self.window[1].getmaxyx()
+        self.player.position = (pa_width // 2, pa_height // 2)
+        for room in self.dungeon.rooms:
+            board = room.board = Board(room.position, (10, 10))
+            board.max_bombs = 5
+            board.populate()
+            board.quantify_bombs()
+
+            # This is to account for room's sizes and a border around them
+            global_x = room.position[0] * board.size[
+                0] * 4  # [X] each tile is 3 characters long plus a space between boards
+            global_y = (room.position[1] * board.size[
+                1] * 3) // 2  # each tile is 1 character tall plus a space between boards
+
+            camera_offset_x, camera_offset_y = self.get_camera_offset(self.player.position, (pa_width, pa_height))
+
+            global_x -= camera_offset_x
+            global_y -= camera_offset_y
+
+            # TODO: Check if the tile is inside the play area and if it is, render it.
+            if self.is_inside_viewport(global_x, global_y, pa_width, pa_height):
+                self.window[1].addstr(global_y, global_x + 2,
+                                      "Room: {}, Bombs: {}".format(room.position, room.board.get_remaining_bombs()))
+            for i in range(len(room.board.tiles)):
+                col_screen_y = global_y + 1
+                col_screen_x = global_x + 5 + (i * 3)
+                if self.is_inside_viewport(col_screen_x, col_screen_y, pa_width, pa_height):
+                    self.window[1].addstr(col_screen_y, col_screen_x,
+                                          "{}".format(chr(65 + i)))  # Column helper indicator (A B C D E...)
+
+                row_screen_y = global_y + 2 + i
+                row_screen_x = global_x
+                if self.is_inside_viewport(row_screen_x, row_screen_y, pa_width, pa_height):
+                    self.window[1].addstr(row_screen_y, row_screen_x,
+                                          "  {}".format(i))  # Row helper indicator (0 1 2 3 4...)
+
+            for i in range(len(room.board.tiles)):
+                for j in range(len(room.board.tiles[0])):
+                    screen_y = global_y + 2 + i
+                    screen_x = global_x + 4 + (j * 3)
+                    if self.is_inside_viewport(screen_x, screen_y, pa_width, pa_height):
+                        self.window[1].addstr(screen_y, screen_x, "{}".format(room.board.tiles[i][j]))
+
+        self.window[1].addstr(pa_height // 2, pa_width // 2,
+                              "{}".format(self.player.char_type))  # Render player in the center of the play area
+        self.window[1].refresh()
+
+        self.window[2].clear()
+        for i in range(self.dungeon.size[0]):
+            self.window[2].addstr(0, 5 + (i * 3), "{}".format(chr(65 + i)))
+            self.window[2].addstr(1 + i, 0, "  {}".format(i))
+
+        for i in range(self.dungeon.size[0]):
+            for j in range(self.dungeon.size[1]):
+                position = (i, j)
+                if self.dungeon.room_exists_at(position):
+                    if self.dungeon.get_room_at(position) == self.dungeon.rooms[0]:
+                        self.window[2].addstr(1 + i, 5 + (j * 3), "S")
+                    elif self.dungeon.is_last_room(self.dungeon.get_room_at(position)):
+                        self.window[2].addstr(1 + i, 5 + (j * 3), "E")
+                    else:
+                        self.window[2].addstr(1 + i, 5 + (j * 3), "O")
+                else:
+                    self.window[2].addstr(1 + i, 5 + (j * 3), "·")
+
+        self.window[2].refresh()
+
+        self.window[3].clear()
+        self.window[3].addstr(0, 0, "a. Discover tile")
+        self.window[3].addstr(1, 0, "b. Flag tile")
+        self.window[3].addstr(2, 0, "c. Go to room")
+        self.window[3].refresh()
+    
+    def handle_input(self, event):
+        pass
+    
+    def loop(self, delta):
+        pass
+
+    def main(self, stdscr):
+        last_time = time.time()
+
+        curses.curs_set(0)
+        stdscr.clear()
+
+        height, width = stdscr.getmaxyx()
+
+        self.window = self.init_window(height, width)
+        self.dungeon = self.init_dungeon()[0]
+
+        while self.is_playing:
+            self.render()
+
+            event = stdscr.getch()
+            if event == ord('q'):
+                break
+            self.handle_input(event)
+
+            current_time = time.time()
+            delta = last_time - current_time
+            self.loop(delta)
+            last_time = current_time
+
+            stdscr.refresh()
+
+    ### Helper functions ###
 
     def init_dungeon(self):
         dungeon = Dungeon((5, 5))
@@ -331,6 +448,14 @@ class Game:
 
         return dungeon, first_room
 
+    def init_window(self, height, width):
+        status_bar = curses.newwin(int(height * 0.05), width, 0, 0)
+        play_area = curses.newwin(int(height * 0.6), int(width * 0.6), int(height * 0.1), 0)
+        dungeon_map = curses.newwin(int(height * 0.35), int(width * 0.35), int(height * 0.1), int(width * 0.65))
+        action_menu = curses.newwin(int(height * 0.25), width, int(height * 0.65), 0)
+
+        return status_bar, play_area, dungeon_map, action_menu
+
     def get_camera_offset(self, player_pos, viewport_size):
         offset_x = player_pos[0] - viewport_size[0] // 2
         offset_y = player_pos[1] - viewport_size[1] // 2
@@ -338,101 +463,6 @@ class Game:
 
     def is_inside_viewport(self, x, y, viewport_width, viewport_height):
         return 0 <= x < viewport_width and 0 <= y < viewport_height
-
-    def main(self, stdscr):
-        curses.curs_set(0)
-        stdscr.clear()
-
-        height, width = stdscr.getmaxyx()
-        print(f"x:{width}, y:{height}")
-
-        status_bar = curses.newwin(int(height * 0.05), width, 0, 0)
-        play_area = curses.newwin(int(height * 0.6), int(width * 0.6), int(height * 0.1), 0)
-        dungeon_map = curses.newwin(int(height * 0.35), int(width * 0.35), int(height * 0.1), int(width * 0.65))
-        action_menu = curses.newwin(int(height * 0.25), width, int(height * 0.65), 0)
-
-        player = Character((0, 0))
-        dungeon, current_room = self.init_dungeon()
-
-        while self.is_playing:
-            status_bar.clear()
-            status_bar.addstr(1, 1, "Room: {}, Bombs: {}".format(current_room.position, current_room.board.get_remaining_bombs()))
-            status_bar.refresh()
-
-            play_area.clear()
-            pa_height, pa_width = play_area.getmaxyx()
-            player.position = (pa_width // 2, pa_height // 2)
-            for room in dungeon.rooms:
-                board = room.board = Board(room.position, (10, 10))
-                board.max_bombs = 5
-                board.populate()
-                board.quantify_bombs()
-
-                # This is to account for room's sizes and a border around them
-                global_x = room.position[0] * board.size[0] * 4 # [X] each tile is 3 characters long plus a space between boards
-                global_y = (room.position[1] * board.size[1] * 3) // 2 # each tile is 1 character tall plus a space between boards
-
-                camera_offset_x, camera_offset_y = self.get_camera_offset(player.position, (pa_width, pa_height))
-
-                global_x -= camera_offset_x
-                global_y -= camera_offset_y
-
-                # TODO: Check if the tile is inside the play area and if it is, render it.
-                if self.is_inside_viewport(global_x, global_y, pa_width, pa_height):
-                    play_area.addstr(global_y, global_x + 2, "Room: {}, Bombs: {}".format(room.position, room.board.get_remaining_bombs()))
-                for i in range(len(room.board.tiles)):
-                    col_screen_y = global_y + 1
-                    col_screen_x = global_x + 5 + (i * 3)
-                    if self.is_inside_viewport(col_screen_x, col_screen_y, pa_width, pa_height):
-                        play_area.addstr(col_screen_y, col_screen_x, "{}".format(chr(65 + i))) # Column helper indicator (A B C D E...)
-
-                    row_screen_y = global_y + 2 + i
-                    row_screen_x = global_x
-                    if self.is_inside_viewport(row_screen_x, row_screen_y, pa_width, pa_height):
-                        play_area.addstr(row_screen_y, row_screen_x, "  {}".format(i)) # Row helper indicator (0 1 2 3 4...)
-
-                for i in range(len(room.board.tiles)):
-                    for j in range(len(room.board.tiles[0])):
-                        screen_y = global_y + 2 + i
-                        screen_x = global_x + 4 + (j * 3)
-                        if self.is_inside_viewport(screen_x, screen_y, pa_width, pa_height):
-                            play_area.addstr(screen_y, screen_x, "{}".format(room.board.tiles[i][j]))
-
-            play_area.addstr(pa_height // 2, pa_width // 2, "{}".format(player.char_type)) # Render player in the center of the play area
-            play_area.refresh()
-
-            dungeon_map.clear()
-            for i in range(dungeon.size[0]):
-                dungeon_map.addstr(0, 5 + (i * 3), "{}".format(chr(65 + i)))
-                dungeon_map.addstr(1 + i, 0, "  {}".format(i))
-
-            for i in range(dungeon.size[0]):
-                for j in range(dungeon.size[1]):
-                    position = (i, j)
-                    if dungeon.room_exists_at(position):
-                        if dungeon.get_room_at(position) == dungeon.rooms[0]:
-                            dungeon_map.addstr(1 + i, 5 + (j * 3), "S")
-                        elif dungeon.is_last_room(dungeon.get_room_at(position)):
-                            dungeon_map.addstr(1 + i, 5 + (j * 3), "E")
-                        else:
-                            dungeon_map.addstr(1 + i, 5 + (j * 3), "O")
-                    else:
-                        dungeon_map.addstr(1 + i, 5 + (j * 3), "·")
-
-            dungeon_map.refresh()
-
-            action_menu.clear()
-            action_menu.addstr(0, 0, "a. Discover tile")
-            action_menu.addstr(1, 0, "b. Flag tile")
-            action_menu.addstr(2, 0, "c. Go to room")
-            action_menu.refresh()
-
-            stdscr.refresh()
-
-            key = stdscr.getch()
-            if key == ord('q'):
-                break
-
 
 game = Game()
 
