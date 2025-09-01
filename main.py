@@ -369,8 +369,8 @@ class Game:
                 board.quantify_bombs()
 
                 # This is to account for room's sizes and a border around them
-                global_x = room.position[0] * board.size[0] * 2 # 0 = 2, 1 = 12, 2 = 24, 3 = 36...
-                global_y = room.position[1] * board.size[1] * 2 # 0 = 2, 1 = 12, 2 = 24, 3 = 36...
+                global_x = room.position[0] * board.size[0] * 4 # [X] each tile is 3 characters long plus a space between boards
+                global_y = (room.position[1] * board.size[1] * 3) // 2 # each tile is 1 character tall plus a space between boards
 
                 camera_offset_x, camera_offset_y = self.get_camera_offset(player.position, (pa_width, pa_height))
 
@@ -378,20 +378,22 @@ class Game:
                 global_y -= camera_offset_y
 
                 # TODO: Check if the tile is inside the play area and if it is, render it.
+                if self.is_inside_viewport(global_x, global_y, pa_width, pa_height):
+                    play_area.addstr(global_y, global_x + 2, "Room: {}, Bombs: {}".format(room.position, room.board.get_remaining_bombs()))
                 for i in range(len(room.board.tiles)):
-                    col_screen_y = global_y
+                    col_screen_y = global_y + 1
                     col_screen_x = global_x + 5 + (i * 3)
                     if self.is_inside_viewport(col_screen_x, col_screen_y, pa_width, pa_height):
                         play_area.addstr(col_screen_y, col_screen_x, "{}".format(chr(65 + i))) # Column helper indicator (A B C D E...)
 
-                    row_screen_y = global_y + 1 + i
+                    row_screen_y = global_y + 2 + i
                     row_screen_x = global_x
                     if self.is_inside_viewport(row_screen_x, row_screen_y, pa_width, pa_height):
                         play_area.addstr(row_screen_y, row_screen_x, "  {}".format(i)) # Row helper indicator (0 1 2 3 4...)
 
                 for i in range(len(room.board.tiles)):
                     for j in range(len(room.board.tiles[0])):
-                        screen_y = global_y + 1 + i
+                        screen_y = global_y + 2 + i
                         screen_x = global_x + 4 + (j * 3)
                         if self.is_inside_viewport(screen_x, screen_y, pa_width, pa_height):
                             play_area.addstr(screen_y, screen_x, "{}".format(room.board.tiles[i][j]))
